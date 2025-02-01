@@ -1,4 +1,4 @@
-import { View, Text, Image, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, TextInput, TouchableOpacity, Alert, AppState } from 'react-native';
 import Colors from "../../constant/Colors";
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import {supabase} from './../../src/service/supabase'
 
 export default function SignUp() {
-    const [name, setName] = useState('');
+    const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -14,15 +14,43 @@ export default function SignUp() {
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
     const router = useRouter();
 
+    AppState.addEventListener('change', (state) => {
+        if (state === 'active') {
+          supabase.auth.startAutoRefresh()
+        } else {
+          supabase.auth.stopAutoRefresh()
+        }
+      })
+
+
+    const handleOAuthLogin = async () => {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+        });
+    
+        if (error) {
+          console.log('Erro ao fazer login com OAuth:', error.message);
+          return;
+        }
+    
+        // O usuário foi autenticado com sucesso, você pode redirecioná-lo ou fazer o que for necessário.
+        console.log('Usuário autenticado', data);
+        router.push('/profile/profile');
+      };
 
     const handleSignUp = async () => {
-        if (!name || !email || !password || !confirmPassword) {
+        setLoading(true)
+        if (!email || !password || !confirmPassword) {
             Alert.alert("Erro", "Todos os campos são obrigatórios!");
+            setLoading(false)
+
             return;
         }
 
         if (password !== confirmPassword) {
             Alert.alert("Erro", "As senhas não coincidem!");
+            setLoading(false)
+
             return;
         }
 
@@ -33,12 +61,16 @@ export default function SignUp() {
             email: email,
             password: password,    
           })
-        
+
         if (error) {
             Alert.alert("Erro ao cadastrar", error.message);
+            setLoading(false)
+
         } else {
-            if (!session) Alert.alert('Please check your inbox for email verification!')  
+            setLoading(false)
+            router.push('/authentication/signIn')
         }
+
     };
 
     return (
@@ -46,13 +78,6 @@ export default function SignUp() {
             <Image style={styles.image} source={require('./../../assets/images/icon.png')} />
             <Text style={styles.title}>Crie sua conta!</Text>
 
-            <TextInput 
-                placeholder='Nome Completo' 
-                placeholderTextColor="gray" 
-                style={styles.textInput} 
-                value={name}
-                onChangeText={setName}
-            />
             <TextInput 
                 placeholder='Email' 
                 placeholderTextColor="gray" 
@@ -73,7 +98,7 @@ export default function SignUp() {
                     onChangeText={setPassword}
                 />
                 <TouchableOpacity 
-                    onPress={() => setIsPasswordVisible(!isPasswordVisible)} 
+                    onPress={() => (setIsPasswordVisible(!isPasswordVisible))} 
                     style={styles.eyeIcon}
                 >
                     <Ionicons name={isPasswordVisible ? "eye-off" : "eye"} size={24} color="gray" />
@@ -98,13 +123,23 @@ export default function SignUp() {
             </View>
 
             <TouchableOpacity style={styles.button} onPress={handleSignUp}>
-                <Text style={styles.buttonText}>Criar Conta</Text>
+                <Text style={styles.buttonText}>{loading ? 'Carregando ...' : 'Criar Conta'}
+                </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={{marginTop: 10}} onPress={() => router.push("/authentication/signIn")}>
                 <Text>Já tem uma conta? Clique aqui</Text>
             </TouchableOpacity>
            
+
+            {/* <TouchableOpacity
+                style={styles.touchableLogin}
+                onPress={handleOAuthLogin}
+                accessible={true}
+                accessibilityLabel="Faça login com Google."
+                >
+                <Text style={styles.textLogin}>Login com Google</Text>
+             </TouchableOpacity> */}
         </View>
     
     );

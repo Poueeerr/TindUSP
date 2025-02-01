@@ -1,29 +1,35 @@
 import Colors from "../constant/Colors";
 import { Image, Text, View, TouchableOpacity } from "react-native";
 import styles from "./style";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import {supabase} from './../src/service/supabase'
-import { useEffect, useState } from "react";
-import { Session } from '@supabase/supabase-js'
+import { supabase } from "./../src/service/supabase";
+import { Session } from "@supabase/supabase-js";
 
 export default function Index() {
   const router = useRouter();
-
-  const [session, setSession] = useState<Session | null>(null)
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
+      setSession(session);
+      if (session?.user) {
+        router.push("/home"); // Redireciona imediatamente se o usuário estiver logado
+      }
+    });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-  }, [])
-  if(session){
-    //router.push('/profile') //ATIVAR DEPOIS PRA VERIFICAR SESSION!!!!!
-  }
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        router.push("/home");
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe(); // Remove listener ao desmontar o componente
+    };
+  }, []);
+
   return (
     <>
       <View style={{ flex: 1, backgroundColor: Colors.WHITE }}>
@@ -53,6 +59,7 @@ export default function Index() {
           >
             <Text style={styles.textLogin}>Já tem uma conta?</Text>
           </TouchableOpacity>
+          
         </View>
       </View>
       <View style={styles.footer}>

@@ -1,4 +1,4 @@
-import { View, Text, Image, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, TextInput, TouchableOpacity, Alert, AppState } from 'react-native';
 import Colors from "./../../constant/Colors";
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,14 +6,42 @@ import { useRouter } from 'expo-router';
 import {supabase} from './../../src/service/supabase'
 
 export default function SignIn() {
+    const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const router = useRouter();
 
+    AppState.addEventListener('change', (state) => {
+        if (state === 'active') {
+          supabase.auth.startAutoRefresh()
+        } else {
+          supabase.auth.stopAutoRefresh()
+        }
+      })
+
+        const handleOAuthLogin = async () => {
+              const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+              });
+          
+              if (error) {
+                console.log('Erro ao fazer login com OAuth:', error.message);
+                return;
+              }
+          
+              // O usuário foi autenticado com sucesso, você pode redirecioná-lo ou fazer o que for necessário.
+              console.log('Usuário autenticado', data);
+              router.push('/profile/profile');
+        };
+
     const handleSignIn = async () => {
+        setLoading(true)
+
         if (!email || !password) {
             Alert.alert("Erro", "Por favor, preencha todos os campos.");
+            setLoading(false)
+
             return;
         }
         console.log(email, password)
@@ -24,14 +52,18 @@ export default function SignIn() {
         })
 
         if (error) {
+            setLoading(false)
             Alert.alert("Erro ao entrar", error.message);
         } else {
+            setLoading(false)
+            router.push('/profile/profile')
+
             Alert.alert("Sucesso!", "Login realizado com sucesso.");
-            router.push("/profile"); 
         }
     };
 
     return (
+        <>
         <View style={styles.container}>
             <Image style={styles.image} source={require('./../../assets/images/icon.png')} />
             <Text style={styles.title}>Login</Text>
@@ -64,13 +96,23 @@ export default function SignIn() {
             </View>
 
             <TouchableOpacity style={styles.button} onPress={handleSignIn}>
-                <Text style={styles.buttonText}>Login</Text>
+                <Text style={styles.buttonText}>{loading ? 'Carregando ...' : 'Login'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={{ marginTop: 10 }} onPress={() => router.push("/authentication/signUp")}>
                 <Text>Não tem uma conta? Cadastre-se!</Text>
             </TouchableOpacity>
+
+              {/* <TouchableOpacity
+                            style={styles.touchableLogin}
+                            onPress={handleOAuthLogin}
+                            accessible={true}
+                            accessibilityLabel="Faça login com Google."
+                            >
+                            <Text style={styles.textLogin}>Login com Google</Text>
+                         </TouchableOpacity> */}
         </View>
+        </>
     );
 }
 

@@ -133,7 +133,7 @@ export default function Account({ session }: { session: Session }) {
         style={styles.button} 
         onPress={() => supabase.auth.signOut()}
       >
-        <Text style={styles.buttonText}>LogOut</Text>
+        <Text style={styles.buttonText}>Logout</Text>
         
       </TouchableOpacity>
     </View>

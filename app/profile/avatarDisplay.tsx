@@ -8,10 +8,9 @@ import Colors from './../../constant/Colors'
 interface Props {
   size: number
   url: string | null
-  onUpload: (filePath: string) => void
 }
 
-export default function Avatar({ url, size = 150, onUpload }: Props) {
+export default function AvatarDisplay({ url, size = 150 }: Props) {
   const [uploading, setUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const avatarSize = { height: size, width: size }
@@ -39,71 +38,6 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
       }
     }
   }
-
-  async function uploadAvatar() {
-    try {
-      setUploading(true)
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: false,
-        allowsEditing: true,
-        quality: 1,
-        exif: false,
-      })
-
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        console.log('User cancelled image picker.')
-        return
-      }
-
-      const image = result.assets[0]
-      console.log('Got image', image)
-
-      if (!image.uri) {
-        throw new Error('No image uri!')
-      }
-
-      const arraybuffer = await fetch(image.uri).then((res) => res.arrayBuffer())
-
-      const fileExt = image.uri?.split('.').pop()?.toLowerCase() ?? 'jpeg'
-      const path = `${Date.now()}.${fileExt}`
-      const { data, error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, arraybuffer, {
-          contentType: image.mimeType ?? 'image/jpeg',
-        })
-
-      if (uploadError) {
-        throw uploadError
-      }
-
-      onUpload(data.path)
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert(error.message)
-      } else {
-        throw error
-      }
-    } finally {
-      setUploading(false)
-    }
-  }
-  const remove = async () => {
-    try {
-      if (url) {
-        const { error } = await supabase.storage.from('avatars').remove([url])
-        if (error) throw error
-      }
-      setAvatarUrl(null)
-      onUpload('') 
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert('Erro ao remover a foto', error.message)
-      }
-    }
-  }
-  
   
 
   return (
@@ -115,21 +49,10 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
         accessibilityLabel="Avatar"
         style={[avatarSize, styles.avatar, styles.image]}
       />
-      {/* <TouchableOpacity 
-        style={styles.iconContainer} 
-        onPress={remove} 
-        disabled={uploading}
-      > 
-
-        <Icon name="delete" size={30} color="#fff" style={styles.icon} />
-      </TouchableOpacity> */}
     </View>
   ) : (
     <Image style={{width: 150, height: 150}} source={require('./../../assets/images/icon.png')}></Image>
   )}
-  <TouchableOpacity style={styles.button} onPress={uploadAvatar} disabled={uploading}>
-    <Text style={styles.buttonText}>{uploading ? 'Carregando ...' : 'Carregar Foto'}</Text>
-  </TouchableOpacity>
 </View>
   )
 }
